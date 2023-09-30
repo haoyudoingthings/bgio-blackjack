@@ -1,5 +1,6 @@
 export interface IScoreCalculator {
   score: (hand: number[]) => number;
+  checkBlackjack: (card1: number, card2: number) => boolean
 }
   
 export const ScoreCalculator: IScoreCalculator = {
@@ -19,5 +20,11 @@ export const ScoreCalculator: IScoreCalculator = {
       numAce -= 1;
     }
     return total;
+  },
+  checkBlackjack: (card1: number, card2: number) => {
+    if ((card1 === 1 && card2 === 10) || (card1 === 10 && card2 === 1)) {
+      return true;
+    }
+    return false;
   }
 }

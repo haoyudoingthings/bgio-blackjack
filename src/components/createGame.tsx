@@ -52,6 +52,7 @@ export const createGame = (numDecks: number) => {
         }
       },
       hit: ({ G, events }: GameObject) => {
+        if (G.hands[1].length === 0) return;
         G.hands[G.curHand].push(G.deck.pop()!);
         if (ScoreCalculator.score(G.hands[1]) > 21 &&
           G.hands[2].length > 0 &&
@@ -62,6 +63,7 @@ export const createGame = (numDecks: number) => {
         }
       },
       stand: ({ G, events }: GameObject) => {
+        if (G.hands[1].length === 0) return;
         if (G.hands[2].length > 0 && G.curHand === 1) {
           G.curHand = 2;
           return;
@@ -98,6 +100,7 @@ export const createGame = (numDecks: number) => {
         events.endTurn();
       },
       double: ({ G, events }: GameObject) => {
+        if (G.hands[1].length === 0) return;
         if (G.hands[2].length > 0) return; // cannot double after split
         G.playerChips -= G.poolChips;
         G.poolChips *= 2;
@@ -125,6 +128,7 @@ export const createGame = (numDecks: number) => {
         events.endTurn();
       },
       split: ({ G }: GameObject) => {
+        if (G.hands[1].length === 0) return;
         if (G.curHand === 1 &&
           G.hands[1].length === 2 &&
           G.hands[1][0] === G.hands[1][1] &&

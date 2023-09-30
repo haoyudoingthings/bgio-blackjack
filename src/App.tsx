@@ -1,13 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import createClient from './components/Game';
 import 'bootstrap/dist/css/bootstrap.min.css';
-// import Setup from './components/Setup'
+import Setup from './components/Setup'
 
 const App: React.FC = () => {
-  const Client = createClient();
+  const [numDecks, setNumDecks] = useState<number | null>(null);
+
+  const handleSelection = (numDecks: number) => {
+    setNumDecks(numDecks);
+  }
+
+  let Client;
+  if (numDecks) {
+    Client = createClient(numDecks);
+  }
+
   return (
     <div>
-      <Client />
+      {
+          Client ?
+            <Client /> :
+            <Setup handleSelection={handleSelection} />
+        }
     </div>
   );
 }

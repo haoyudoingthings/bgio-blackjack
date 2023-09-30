@@ -1,6 +1,7 @@
 import React from 'react';
 import createClient from './components/Game';
 import 'bootstrap/dist/css/bootstrap.min.css';
+// import Setup from './components/Setup'
 
 const App: React.FC = () => {
   const Client = createClient();

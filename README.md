@@ -4,6 +4,13 @@ The game of Blackjack implemented with boardgame.io, following [the official doc
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## TODO
+
+- [x] Functional game, playable with debug panel
+- [ ] Functional GUI, playable without debug panel
+- [ ] Different rulesets
+- [ ] Multiplayer with chatroom (unnecessary for blackjack really)
+
 ## Available Scripts
 
 In the project directory, you can run:

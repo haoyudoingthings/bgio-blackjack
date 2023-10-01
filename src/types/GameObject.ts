@@ -25,7 +25,8 @@ export interface GameState {
   hands: number[][]; // hands[0]: dealerHand; hands[1]: playerHand; hands[2]: splitHand
   curHand: number; // can be "playerHand" or "splitHand"
   playerChips: number; // chips held by player
-  poolChips: number // chips on the table
+  poolChips: number; // chips on the table
+  highestChips: number // highest chips the player has ever held
 }
 
 export interface GameObject {

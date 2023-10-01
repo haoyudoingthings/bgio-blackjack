@@ -16,6 +16,7 @@ export const createGame = (numDecks: number) => {
       const curHand = 1;
       const playerChips = 100;
       const poolChips = 0;
+      const highestChips = 100;
 
       return ({
         numDecks,
@@ -23,7 +24,8 @@ export const createGame = (numDecks: number) => {
         hands,
         curHand,
         playerChips,
-        poolChips
+        poolChips,
+        highestChips
       });
     },
     moves: {
@@ -102,6 +104,7 @@ export const createGame = (numDecks: number) => {
       double: ({ G, events }: GameObject) => {
         if (G.hands[1].length === 0) return;
         if (G.hands[2].length > 0) return; // cannot double after split
+        if (G.playerChips < G.poolChips) return; // cannot double if you don't have enough money
         G.playerChips -= G.poolChips;
         G.poolChips *= 2;
         // hit one more card
@@ -129,6 +132,7 @@ export const createGame = (numDecks: number) => {
       },
       split: ({ G }: GameObject) => {
         if (G.hands[1].length === 0) return;
+        if (G.playerChips < G.poolChips) return; // cannot split if you don't have enough money
         if (G.curHand === 1 &&
           G.hands[1].length === 2 &&
           G.hands[1][0] === G.hands[1][1] &&
@@ -144,14 +148,22 @@ export const createGame = (numDecks: number) => {
         G.hands = [[], [], []];
         G.curHand = 1;
         G.poolChips = 0; // dealer collects chips
+        if (G.playerChips > G.highestChips) {
+          G.highestChips = G.playerChips;
+        }
+        if (G.deck.length < 0.25 * G.numDecks * 52) {
+          G.deck = Array(G.numDecks).fill(
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10,
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10,
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10,
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]).flat();
+        }
       }
     },
     endIf: ({ G }: GameObject) => {
       if (G.playerChips + G.poolChips <= 0) {
-        return "You are broke!";
+        return `You could've walked away with $${G.highestChips}, but you didn't lmao`;
       }
-      if (G.deck.length < 0.25 * G.numDecks * 52)
-        return "Out of cards!";
     }
   };
 };

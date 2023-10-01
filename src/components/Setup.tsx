@@ -11,7 +11,7 @@ const Setup: React.FC<SetupProps> = ({ handleSelection }) => {
   return (
     <Container>
       <Row>
-        <Col xs={12} md={4}>
+        <Col xs={12} md={8}>
           <StyledHeader>Blackjack</StyledHeader>
           <p>How many decks?</p>
           <StyledButton onClick={() => handleSelection(2)}>2</StyledButton>

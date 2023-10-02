@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import createClient from './components/Game';
+import createClient, { ClientProps } from './components/Game';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Setup from './components/Setup'
 
 const App: React.FC = () => {
-  const [numDecks, setNumDecks] = useState<number | null>(null);
+  const [clientProps, setClientProps] = useState<ClientProps | null>(null);
 
-  const handleSelection = (numDecks: number) => {
-    setNumDecks(numDecks);
+  const onClientPropsSubmit = (props: ClientProps) => {
+    setClientProps(props);
   }
 
   let Client;
-  if (numDecks) {
-    Client = createClient(numDecks);
+  if (clientProps) {
+    Client = createClient(clientProps);
   }
 
   return (
@@ -20,7 +20,7 @@ const App: React.FC = () => {
       {
           Client ?
             <Client /> :
-            <Setup handleSelection={handleSelection} />
+          <Setup onClientPropsSubmit={onClientPropsSubmit} />
         }
     </div>
   );

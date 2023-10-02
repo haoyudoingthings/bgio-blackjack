@@ -1,9 +1,13 @@
+import { Card } from "../utils/Card";
+import { DealerDeck } from "../utils/Deck";
+import { Player } from "../utils/Player";
+
 interface GameOver {
   winner: number;
 }
 
 interface Random {
-  Shuffle: (deck: number[]) => number[];
+  Shuffle: (deck: any[]) => any[];
 }
 
 interface Events {
@@ -17,16 +21,16 @@ export interface GameContext {
   gameover?: GameOver;
   random: Random;
   events: Events;
+  playOrderPos: number;
 }
 
 export interface GameState {
   numDecks: number; // number of decks of 52 playing cards used in each game
-  deck: number[]; // an array of remaining cards
-  hands: number[][]; // hands[0]: dealerHand; hands[1]: playerHand; hands[2]: splitHand
-  curHand: number; // can be "playerHand" or "splitHand"
-  playerChips: number; // chips held by player
+  dealerDeck: DealerDeck; // an array of remaining cards
+  dealerHand: Card[]; // hands[0]: dealerHand; hands[1]: playerHand; hands[2]: splitHand
+  dealerValue?: number;
   poolChips: number; // chips on the table
-  highestChips: number // highest chips the player has ever held
+  players: Player[];
 }
 
 export interface GameObject {

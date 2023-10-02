@@ -1,169 +1,140 @@
 import { GameObject } from '../types/GameObject';
+import { Card, CardFace } from '../utils/Card';
+import { DealerDeck } from '../utils/Deck';
+import { Player } from '../utils/Player';
+
 import { ScoreCalculator } from '../utils/ScoreCalculator';
 
-export const createGame = (numDecks: number) => {
+import { TurnOrder } from 'boardgame.io/core';
+
+export const createGame = (numDecks: number, numPlayers: number) => {
 
   return {
     name: 'Blackjack',
     setup: () => {
-      // const numDecks = 6; // TODO: should be adjustable
-      const deck = Array(numDecks).fill(
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10,
-          1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10,
-          1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10,
-          1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]).flat();
-      const hands: number[][] = [[], [], []];
-      const curHand = 1;
-      const playerChips = 100;
+      const dealerDeck = new DealerDeck();
+      dealerDeck.initial(numDecks);
+      const dealerHand: Card[] = [];
+
+      const players: Player[] = [];
+      for (let i = 0; i < numPlayers; i++) {
+        players.push(new Player(i, 100));
+      }
+
       const poolChips = 0;
-      const highestChips = 100;
 
       return ({
         numDecks,
-        deck,
-        hands,
-        curHand,
-        playerChips,
+        dealerDeck,
+        dealerHand,
         poolChips,
-        highestChips
+        players
       });
     },
-    moves: {
-      bet: ({ G, events, random }: GameObject, betAmount: number) => {
-        if (betAmount > G.playerChips || G.poolChips > 0) return;
-        // shuffle cards, deals cards and check for blackjack
-        G.deck = random.Shuffle(G.deck);
-        G.hands[0].push(G.deck.pop()!);
-        G.hands[1].push(G.deck.pop()!);
-        G.hands[1].push(G.deck.pop()!);
-        const dealerBlackjack = ScoreCalculator.checkBlackjack(G.hands[0][0], G.deck[G.deck.length-1]);
-        const playerBlackjack = ScoreCalculator.score(G.hands[1]) === 21;
-        if (dealerBlackjack && playerBlackjack) {
-          G.hands[0].push(G.deck.pop()!);
-          events.endTurn();
-        } else if (dealerBlackjack) {
-          G.hands[0].push(G.deck.pop()!);
-          G.playerChips -= betAmount;
-          events.endTurn();
-        } else if (playerBlackjack) {
-          G.playerChips += Math.floor(1.5 * betAmount);
-          events.endTurn();
-        } else {
-          G.playerChips -= betAmount;
-          G.poolChips += betAmount;
-        }
-      },
-      hit: ({ G, events }: GameObject) => {
-        if (G.hands[1].length === 0) return;
-        G.hands[G.curHand].push(G.deck.pop()!);
-        if (ScoreCalculator.score(G.hands[1]) > 21 &&
-          G.hands[2].length > 0 &&
-          G.curHand === 1) {
-          G.curHand = 2;
-        } else if (ScoreCalculator.score(G.hands[G.curHand]) > 21) {
-          events.endTurn();
-        }
-      },
-      stand: ({ G, events }: GameObject) => {
-        if (G.hands[1].length === 0) return;
-        if (G.hands[2].length > 0 && G.curHand === 1) {
-          G.curHand = 2;
-          return;
-        }
-        // dealer's play
-        while (ScoreCalculator.score(G.hands[0]) < 17) {
-          G.hands[0].push(G.deck.pop()!);
-        }
-        // pay out
-        const dealerScore = ScoreCalculator.score(G.hands[0]);
-        if (dealerScore > 21) {
-          G.playerChips += 2 * G.poolChips;
-        } else if (G.hands[2].length === 0) {
-          const playerScore = ScoreCalculator.score(G.hands[1]);
-          if (playerScore > dealerScore) {
-            G.playerChips += 2 * G.poolChips;
-          } else if (playerScore === dealerScore) {
-            G.playerChips += G.poolChips;
+
+    phases: {
+      initialDeal: {
+        start: true,
+        endIf: ({ G }: GameObject) => {
+          G.players.every((player) => player.currentBet > 0)
+        },
+        moves: {
+          bet: ({ G, ctx, events, random }: GameObject, betAmount: number) => {
+            const curPlayer = G.players[0]; // only allow 1 player for now
+            if (!curPlayer.canBet(betAmount)) return;
+            curPlayer.bet(betAmount);
+            G.poolChips += betAmount;
+            events.endTurn();
           }
-        } else {
-          const playerScore1 = ScoreCalculator.score(G.hands[1]);
-          if (playerScore1 > dealerScore) {
-            G.playerChips += G.poolChips;
-          } else if (playerScore1 === dealerScore) {
-            G.playerChips += Math.floor(0.5 * G.poolChips);
-          }
-          const playerScore2 = ScoreCalculator.score(G.hands[2]);
-          if (playerScore2 > dealerScore) {
-            G.playerChips += G.poolChips;
-          } else if (playerScore2 === dealerScore) {
-            G.playerChips += Math.floor(0.5 * G.poolChips);
-          }
-        }
-        events.endTurn();
+        },
+        onEnd: ({ G, ctx }: GameObject) => {
+          // deal cards
+
+          // each player get one card first
+          G.players.forEach((player) => {
+            player.addCard(G.dealerDeck.dealCard());
+          })
+
+          // dealer get a card, faced up
+          G.dealerHand.push(G.dealerDeck.dealCard())
+          
+          // each player get second card
+          G.players.forEach((player) => {
+            player.addCard(G.dealerDeck.dealCard());
+          })
+          
+          // dealer get second card, faced down
+          // G.dealerHand.push(G.dealerDeck.dealCard(CardFace.down));
+
+          // check for blackjack
+          G.players.forEach((player) => {
+            if (ScoreCalculator.checkBlackjack(...player.initialHand!)) {
+              player.win(1.5);
+            }
+          })
+        },
+        next: "playerAction",
       },
-      double: ({ G, events }: GameObject) => {
-        if (G.hands[1].length === 0) return;
-        if (G.hands[2].length > 0) return; // cannot double after split
-        if (G.playerChips < G.poolChips) return; // cannot double if you don't have enough money
-        G.playerChips -= G.poolChips;
-        G.poolChips *= 2;
-        // hit one more card
-        G.hands[1].push(G.deck.pop()!);
-        if (ScoreCalculator.score(G.hands[1]) > 21) {
-          events.endTurn();
-        }
-        // dealer's play
-        while (ScoreCalculator.score(G.hands[0]) < 17) {
-          G.hands[0].push(G.deck.pop()!);
-        }
-        // pay out
-        const dealerScore = ScoreCalculator.score(G.hands[0]);
-        if (dealerScore > 21) {
-          G.playerChips += 2 * G.poolChips;
-        } else {
-          const playerScore = ScoreCalculator.score(G.hands[1]);
-          if (playerScore > dealerScore) {
-            G.playerChips += 2 * G.poolChips;
-          } else if (playerScore === dealerScore) {
-            G.playerChips += G.poolChips;
+
+      playerAction: {
+        moves: {
+          hit: ({ G, ctx, events, random }: GameObject) => {},
+          stand: ({ G, ctx, events, random }: GameObject) => {},
+          double: ({ G, ctx, events, random }: GameObject) => {},
+          split: ({ G, ctx, events, random }: GameObject) => {},
+        },
+        turn: {
+          order: TurnOrder.ONCE, //This is another round-robin, but it goes around only once. After this, the phase ends automatically.
+          onBegin: ({ G, ctx, events }: GameObject) => {
+            const curPlayer = G.players[ctx.playOrderPos];
+            if (curPlayer.isEmptyHand) {
+              events.endTurn();
+            }
           }
-        }
-        events.endTurn();
+        },
+        next: "settled",
       },
-      split: ({ G }: GameObject) => {
-        if (G.hands[1].length === 0) return;
-        if (G.playerChips < G.poolChips) return; // cannot split if you don't have enough money
-        if (G.curHand === 1 &&
-          G.hands[1].length === 2 &&
-          G.hands[1][0] === G.hands[1][1] &&
-          G.hands[1][0] !== 1) {
-          G.hands[2].push(G.hands[1].pop()!);
-          G.playerChips -= G.poolChips;
-          G.poolChips *= 2;
-        }
+
+      settled: {
+        onBegin: ({ G, ctx, events }: GameObject) => { 
+          // dealer get a second card, faced up
+          G.dealerHand.push(G.dealerDeck.dealCard());
+          G.dealerValue = ScoreCalculator.score(G.dealerHand);
+        },
+        turn: {
+          order: TurnOrder.ONCE,
+          onBegin: ({ G, ctx, events }: GameObject) => {
+            const curPlayer = G.players[ctx.playOrderPos];
+            if (curPlayer.isEmptyHand) {
+              events.endTurn();
+            }
+            
+            let playerValue = ScoreCalculator.score(curPlayer.getCards());
+            if (playerValue > G.dealerValue!) {
+              curPlayer.win(1);
+            } else if (playerValue < G.dealerValue!) {
+              curPlayer.lose();
+            } else {
+              curPlayer.tie();
+            }
+
+            if (curPlayer.splitted && curPlayer.curHand == 0) {
+              curPlayer.curHand += 1
+              playerValue = ScoreCalculator.score(curPlayer.getCards());
+              if (playerValue > G.dealerValue!) {
+                curPlayer.win(1);
+              } else if (playerValue < G.dealerValue!) {
+                curPlayer.lose();
+              } else {
+                curPlayer.tie();
+              }
+            }
+
+            events.endTurn();
+          }
+        },
+        next: "initialDeal",
       }
     },
-    turn: {
-      onEnd: ({ G }: GameObject) => {
-        G.hands = [[], [], []];
-        G.curHand = 1;
-        G.poolChips = 0; // dealer collects chips
-        if (G.playerChips > G.highestChips) {
-          G.highestChips = G.playerChips;
-        }
-        if (G.deck.length < 0.25 * G.numDecks * 52) {
-          G.deck = Array(G.numDecks).fill(
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10,
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10,
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10,
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]).flat();
-        }
-      }
-    },
-    endIf: ({ G }: GameObject) => {
-      if (G.playerChips + G.poolChips <= 0) {
-        return `You could've walked away with $${G.highestChips}, but you didn't lmao`;
-      }
-    }
   };
 };

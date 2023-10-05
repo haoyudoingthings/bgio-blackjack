@@ -71,6 +71,17 @@ export class Player extends SerializableEntity {
         this.chips -= betAmount;
     }
 
+    split(): void {
+        if (this.splitted || this.isEmptyHand ||
+            this.hands[0][0].value !== this.hands[0][1].value || this.chips < this.betOnTable) {
+            return;
+        }
+
+        this.bet(this.betOnTable);
+        this.hands[1].push(this.hands[0].pop()!);
+        this.splitted = true;
+    }
+
     win(paidOutOdds: number): void {
         this.chips += (this.betOnTable + this.betOnTable * paidOutOdds)
         this.hands[this.curHand] = [];

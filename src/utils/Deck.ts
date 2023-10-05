@@ -19,6 +19,10 @@ export class StandardDeck extends SerializableEntity {
             }
         });
     }
+
+    static get totalCard(): number {
+        return 52;
+    }
 }
 
 @Serializable()
@@ -28,13 +32,17 @@ export class DealerDeck extends SerializableEntity {
         elementType: Card,
     })
     cards: Card[]
+    @JsonProperty({type: Number})
+    numDecks: number
 
     constructor() {
         super();
         this.cards = [];
+        this.numDecks = 0;
     }
 
     initial(numDecks: number): void {
+        this.numDecks = numDecks;
         this.cards = [];
         for (let i = 0; i < numDecks; i++) {
             const deck = new StandardDeck();
@@ -46,5 +54,9 @@ export class DealerDeck extends SerializableEntity {
         const c = this.cards.pop()!;
         c.face = face;
         return c;
+    }
+
+    get shouldRefill(): Boolean {
+        return this.cards.length < this.numDecks * StandardDeck.totalCard;
     }
 }

@@ -1,18 +1,53 @@
+import { JsonProperty, Serializable, SerializableEntity } from "ts-jackson";
 import { Card } from "./Card";
 
-export class Player {
+@Serializable()
+export class Player extends SerializableEntity {
+    @JsonProperty({type: Number})
     id: number;
+    @JsonProperty({type: Number})
     chips: number;
+    @JsonProperty({type: Number})
     highestChips: number;
+    @JsonProperty({type: Number})
     betOnTable: number;
+    @JsonProperty({
+        type: Array,
+        elementType: Card,
+        deserialize: (jsonValue: Record<string, unknown>[][]): Card[][] => {
+            let origin: Card[] = [];
+            let split: Card[] = [];
+            if (jsonValue[0].length > 0) {
+                origin = jsonValue[0].map((s) => Card.deserialize(s))
+            }
+            if (jsonValue[1].length > 0) {
+                split = jsonValue[1].map((s) => Card.deserialize(s))
+            }
+            return [origin, split];
+        },
+        serialize: (hands: Card[][]) => {
+            let origin: Record<string, unknown>[] = [];
+            let split: Record<string, unknown>[] = [];
+            if (hands[0].length > 0) {
+                origin = hands[0].map((c) => c.serialize())
+            }
+            if (hands[1].length > 0) {
+                split = hands[1].map((c) => c.serialize())
+            }
+            return [origin, split]
+        }
+    })
     hands: Card[][];
+    @JsonProperty({type: Number})
     curHand: number;
+    @JsonProperty({type: Boolean})
     splitted: boolean;
 
-    constructor(id: number, chips: number) {
-        this.id = id;
-        this.chips = chips;
-        this.highestChips = chips;
+    constructor(id?: number, chips?: number) {
+        super();
+        this.id = id || 0;
+        this.chips = chips || 100;
+        this.highestChips = this.chips!;
         this.hands = [[], []];
         this.curHand = 0; // 0: orignialHand, 1: splitHand
         this.betOnTable = 0;
@@ -79,6 +114,6 @@ export class Player {
     }
 
     get isEmptyHand() {
-        return this.hands[0].length == 0 && this.hands[1].length == 0;
+        return this.hands[0].length === 0 && this.hands[1].length === 0;
     }
 }

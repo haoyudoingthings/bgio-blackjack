@@ -1,10 +1,17 @@
+import { JsonProperty, Serializable, SerializableEntity } from "ts-jackson";
 import { Card, CardFace, CardType } from "./Card";
 
 // A standard poker deck consists of 52 cards
-export class StandardDeck {
+@Serializable()
+export class StandardDeck extends SerializableEntity {
+    @JsonProperty({
+        type: Array,
+        elementType: Card,
+    })
     cards: Card[]
 
     constructor() {
+        super()
         this.cards = [];
         Object.values(CardType).filter((val) => !isNaN(Number(val))).forEach((val) => {
             for (let i = 1; i <= 13; i++) {
@@ -14,10 +21,16 @@ export class StandardDeck {
     }
 }
 
-export class DealerDeck {
+@Serializable()
+export class DealerDeck extends SerializableEntity {
+    @JsonProperty({
+        type: Array,
+        elementType: Card,
+    })
     cards: Card[]
 
     constructor() {
+        super();
         this.cards = [];
     }
 

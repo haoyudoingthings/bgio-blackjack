@@ -26,16 +26,17 @@ export interface GameContext {
 
 export interface GameState {
   numDecks: number; // number of decks of 52 playing cards used in each game
-  dealerDeck: DealerDeck; // an array of remaining cards
-  dealerHand: Card[]; // hands[0]: dealerHand; hands[1]: playerHand; hands[2]: splitHand
+  dealerDeck: Record<string, unknown>; // <DealerDeck>, an array of remaining cards
+  dealerHand: Record<string, unknown>[]; // <Card[]>, hands[0]: dealerHand; hands[1]: playerHand; hands[2]: splitHand
   dealerValue?: number;
   poolChips: number; // chips on the table
-  players: Player[];
+  players: Record<string, unknown>[]; // <Player[]>
 }
 
 export interface GameObject {
   G: GameState;
   ctx: GameContext;
+  playerId: string;
   events: Events;
   random: Random
 }

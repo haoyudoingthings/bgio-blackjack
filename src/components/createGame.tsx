@@ -1,16 +1,15 @@
-import { GameObject } from '../types/GameObject';
-import { Card, CardFace } from '../utils/Card';
-import { DealerDeck } from '../utils/Deck';
-import { Player } from '../utils/Player';
+import { GameObject } from "../types/GameObject";
+import { Card, CardFace } from "../utils/Card";
+import { DealerDeck } from "../utils/Deck";
+import { Player } from "../utils/Player";
 
-import { ScoreCalculator } from '../utils/ScoreCalculator';
+import { ScoreCalculator } from "../utils/ScoreCalculator";
 
-import { TurnOrder } from 'boardgame.io/core';
+import { TurnOrder } from "boardgame.io/core";
 
 export const createGame = (numDecks: number, numPlayers: number) => {
-
   return {
-    name: 'Blackjack',
+    name: "Blackjack",
     setup: () => {
       const dealerDeck = new DealerDeck();
       dealerDeck.initial(numDecks);
@@ -23,58 +22,61 @@ export const createGame = (numDecks: number, numPlayers: number) => {
 
       const poolChips = 0;
 
-      return ({
+      return {
         numDecks,
         dealerDeck: dealerDeck.serialize(),
         dealerHand: dealerHand.map((c) => c.serialize()),
         poolChips,
         players: players.map((p) => p.serialize()),
-      });
+      };
     },
 
     phases: {
       initialDeal: {
         start: true,
         endIf: ({ G }: GameObject) => {
-          const players = G.players.map((p) => Player.deserialize(p))
-          players.every((player) => player.currentBet > 0)
+          const players = G.players.map((p) => Player.deserialize(p));
+          players.every((player) => player.currentBet > 0);
         },
         turn: {
           order: TurnOrder.ONCE,
         },
         moves: {
-          bet: ({ G, ctx, events, random }: GameObject, betAmount: number) => {
+          bet: (
+            { G, ctx, events, random, playerID }: GameObject,
+            betAmount: number
+          ) => {
             const players = G.players.map((p) => Player.deserialize(p));
-            const curPlayer = players[0]; // only allow 1 player for now
+            const curPlayer = players[ctx.currentPlayer];
             if (!curPlayer.canBet(betAmount)) return;
             curPlayer.bet(betAmount);
             G.poolChips += betAmount;
-            G.players = players.map((p) => p.serialize())
+            G.players = players.map((p) => p.serialize());
             events.endTurn();
-          }
+          },
         },
         onEnd: ({ G, ctx, random }: GameObject) => {
           const players = G.players.map((p) => Player.deserialize(p));
           const dealerDeck = DealerDeck.deserialize(G.dealerDeck);
           const dealerHand = G.dealerHand.map((h) => Card.deserialize(h));
           // shuffle
-          dealerDeck.cards = random.Shuffle(dealerDeck.cards)
+          dealerDeck.cards = random.Shuffle(dealerDeck.cards);
 
           // deal cards
 
           // each player get one card first
           players.forEach((player) => {
             player.addCard(dealerDeck.dealCard());
-          })
+          });
 
           // dealer get a card, faced up
-          dealerHand.push(dealerDeck.dealCard())
-          
+          dealerHand.push(dealerDeck.dealCard());
+
           // each player get second card
           players.forEach((player) => {
             player.addCard(dealerDeck.dealCard());
-          })
-          
+          });
+
           // dealer get second card, faced down
           dealerHand.push(dealerDeck.dealCard(CardFace.down));
 
@@ -86,11 +88,11 @@ export const createGame = (numDecks: number, numPlayers: number) => {
             if (ScoreCalculator.checkBlackjack(...player.initialHand!)) {
               player.win(1.5);
             }
-          })
+          });
 
-          G.players = players.map((p) => p.serialize())
-          G.dealerDeck = dealerDeck.serialize()
-          G.dealerHand = dealerHand.map((h) => h.serialize())
+          G.players = players.map((p) => p.serialize());
+          G.dealerDeck = dealerDeck.serialize();
+          G.dealerHand = dealerHand.map((h) => h.serialize());
         },
         next: "playerAction",
       },
@@ -100,9 +102,9 @@ export const createGame = (numDecks: number, numPlayers: number) => {
           return G.dealerValue! > 21;
         },
         moves: {
-          hit: ({ G, ctx, playerId, events, random }: GameObject) => {
-            const players = G.players.map((p) => Player.deserialize(p))
-            const curPlayer = players[0]; // only allow 1 player for now
+          hit: ({ G, ctx, playerID, events, random }: GameObject) => {
+            const players = G.players.map((p) => Player.deserialize(p));
+            const curPlayer = players[ctx.currentPlayer];
             const dealerDeck = DealerDeck.deserialize(G.dealerDeck);
 
             curPlayer.addCard(dealerDeck.dealCard(CardFace.up));
@@ -113,6 +115,7 @@ export const createGame = (numDecks: number, numPlayers: number) => {
                 G.players = players.map((p) => p.serialize());
                 G.dealerDeck = dealerDeck.serialize();
                 events.endTurn();
+                return;
               }
             }
 
@@ -120,8 +123,8 @@ export const createGame = (numDecks: number, numPlayers: number) => {
             G.dealerDeck = dealerDeck.serialize();
           },
           stand: ({ G, ctx, events, random }: GameObject) => {
-            const players = G.players.map((p) => Player.deserialize(p))
-            const curPlayer = players[0]; // only allow 1 player for now
+            const players = G.players.map((p) => Player.deserialize(p));
+            const curPlayer = players[ctx.currentPlayer];
             if (curPlayer.splitted && curPlayer.curHand === 0) {
               curPlayer.curHand += 1;
             } else {
@@ -131,7 +134,7 @@ export const createGame = (numDecks: number, numPlayers: number) => {
           },
           double: ({ G, ctx, events, random }: GameObject) => {
             const players = G.players.map((p) => Player.deserialize(p));
-            const curPlayer = players[0]; // only allow 1 player for now
+            const curPlayer = players[ctx.currentPlayer];
             const dealerDeck = DealerDeck.deserialize(G.dealerDeck);
             const dealerHand = G.dealerHand.map((h) => Card.deserialize(h));
 
@@ -140,7 +143,7 @@ export const createGame = (numDecks: number, numPlayers: number) => {
             }
 
             curPlayer.bet(curPlayer.betOnTable);
-            
+
             curPlayer.addCard(dealerDeck.dealCard(CardFace.up));
             if (ScoreCalculator.score(curPlayer.getCards()) > 21) {
               curPlayer.lose();
@@ -152,7 +155,7 @@ export const createGame = (numDecks: number, numPlayers: number) => {
 
             while (G.dealerValue! < 17) {
               dealerHand.push(dealerDeck.dealCard(CardFace.down));
-              G.dealerValue = ScoreCalculator.score(dealerHand)
+              G.dealerValue = ScoreCalculator.score(dealerHand);
             } // if dealerValue > 21, this phase will end automatically
 
             G.players = players.map((p) => p.serialize());
@@ -162,8 +165,8 @@ export const createGame = (numDecks: number, numPlayers: number) => {
           },
           split: ({ G, ctx, events, random }: GameObject) => {
             const players = G.players.map((p) => Player.deserialize(p));
-            const curPlayer = players[0]; // only allow 1 player for now
-            
+            const curPlayer = players[ctx.currentPlayer];
+
             if (curPlayer.splitted) {
               return;
             }
@@ -178,7 +181,7 @@ export const createGame = (numDecks: number, numPlayers: number) => {
             }
 
             const dealerDeck = DealerDeck.deserialize(G.dealerDeck);
-            
+
             curPlayer.split();
             curPlayer.hands[0].push(dealerDeck.dealCard());
             curPlayer.hands[1].push(dealerDeck.dealCard());
@@ -189,12 +192,12 @@ export const createGame = (numDecks: number, numPlayers: number) => {
         turn: {
           order: TurnOrder.ONCE, //This is another round-robin, but it goes around only once. After this, the phase ends automatically.
           onBegin: ({ G, ctx, events }: GameObject) => {
-            const players = G.players.map((p) => Player.deserialize(p))
-            const curPlayer = players[0]; // only allow 1 player for now
+            const players = G.players.map((p) => Player.deserialize(p));
+            const curPlayer = players[ctx.currentPlayer];
             if (curPlayer.isEmptyHand) {
               events.endTurn();
             }
-          }
+          },
         },
         next: "settled",
       },
@@ -205,7 +208,7 @@ export const createGame = (numDecks: number, numPlayers: number) => {
           const dealerHand = G.dealerHand.map((h) => Card.deserialize(h));
           while (G.dealerValue! < 17) {
             dealerHand.push(dealerDeck.dealCard(CardFace.down));
-            G.dealerValue = ScoreCalculator.score(dealerHand)
+            G.dealerValue = ScoreCalculator.score(dealerHand);
           }
 
           G.dealerDeck = dealerDeck.serialize();
@@ -215,7 +218,7 @@ export const createGame = (numDecks: number, numPlayers: number) => {
           order: TurnOrder.ONCE,
           onBegin: ({ G, ctx, events }: GameObject) => {
             const players = G.players.map((p) => Player.deserialize(p));
-            const curPlayer = players[0]; // only allow 1 player for now
+            const curPlayer = players[ctx.currentPlayer];
 
             for (let i = 0; i < 2; i++) {
               curPlayer.curHand = i;
@@ -223,7 +226,10 @@ export const createGame = (numDecks: number, numPlayers: number) => {
                 let playerValue = ScoreCalculator.score(curPlayer.getCards());
                 if (playerValue < G.dealerValue! || playerValue > 21) {
                   curPlayer.lose();
-                } else if (playerValue > G.dealerValue! || G.dealerValue! > 21) {
+                } else if (
+                  playerValue > G.dealerValue! ||
+                  G.dealerValue! > 21
+                ) {
                   curPlayer.win(1);
                 } else {
                   curPlayer.tie();
@@ -231,9 +237,9 @@ export const createGame = (numDecks: number, numPlayers: number) => {
               }
             }
             curPlayer.curHand = 0;
-            G.players = players.map((p) => p.serialize())
+            G.players = players.map((p) => p.serialize());
             events.endTurn();
-          }
+          },
         },
         onEnd: ({ G, ctx }: GameObject) => {
           G.dealerHand = [];
@@ -246,7 +252,7 @@ export const createGame = (numDecks: number, numPlayers: number) => {
           }
         },
         next: "initialDeal",
-      }
+      },
     },
   };
 };

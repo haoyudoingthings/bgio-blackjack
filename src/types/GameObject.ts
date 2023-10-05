@@ -36,7 +36,7 @@ export interface GameState {
 export interface GameObject {
   G: GameState;
   ctx: GameContext;
-  playerId: string;
+  playerID: string;
   events: Events;
-  random: Random
+  random: Random;
 }

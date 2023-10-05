@@ -11,13 +11,13 @@ interface BoardProps {
 
 const Board: React.FC<BoardProps> = ({ ctx, G, moves }) => {
   const players = G.players.map((p) => Player.deserialize(p));
-  const curPlayer = players[ctx.currentPlayer]; // only allow 1 player for now
+  // const curPlayer = players[ctx.currentPlayer]; // only allow 1 player for now
   const dealerHand = G.dealerHand.map((h) => Card.deserialize(h));
 
   const boardStyle = {
     border: "1px solid #555",
     width: "500px",
-    height: "500px",
+    height: "1000px",
     margin: "20px",
     backgroundColor: "rgba(120, 151, 137, 0.6)",
   };
@@ -52,34 +52,49 @@ const Board: React.FC<BoardProps> = ({ ctx, G, moves }) => {
     );
   }
 
-  let tbodyPlayer = [];
-  for (let i = 0; i < curPlayer.hands[0].length; i++) {
-    const c = curPlayer.hands[0][i];
-    tbodyPlayer.push(
-      <td key={"original_hand" + i}>
-        {c.face === CardFace.up ? (
-          <div style={cardFaceStyle}>{c.value}</div>
-        ) : (
-          <div style={cardBackStyle}></div>
-        )}
-      </td>
-    );
-  }
+  let playerTables = [<div key={"dummy"}></div>];
+  players.forEach((curPlayer) => {
+    let tbodyPlayer = [];
+    for (let i = 0; i < curPlayer.hands[0].length; i++) {
+      const c = curPlayer.hands[0][i];
+      tbodyPlayer.push(
+        <td key={"original_hand" + i}>
+          {c.face === CardFace.up ? (
+            <div style={cardFaceStyle}>{c.value}</div>
+          ) : (
+            <div style={cardBackStyle}></div>
+          )}
+        </td>
+      );
+    }
 
-  tbodyPlayer.push(<td key={"space"} style={{ width: "50px" }}></td>);
+    tbodyPlayer.push(<td key={"space"} style={{ width: "50px" }}></td>);
 
-  for (let i = 0; i < curPlayer.hands[1].length; i++) {
-    const c = curPlayer.hands[0][i];
-    tbodyPlayer.push(
-      <td key={"split_hand" + i}>
-        {c.face === CardFace.up ? (
-          <div style={cardFaceStyle}>{c.value}</div>
-        ) : (
-          <div style={cardBackStyle}></div>
-        )}
-      </td>
+    for (let i = 0; i < curPlayer.hands[1].length; i++) {
+      const c = curPlayer.hands[0][i];
+      tbodyPlayer.push(
+        <td key={"split_hand" + i}>
+          {c.face === CardFace.up ? (
+            <div style={cardFaceStyle}>{c.value}</div>
+          ) : (
+            <div style={cardBackStyle}></div>
+          )}
+        </td>
+      );
+    }
+
+    playerTables.push(
+      <div key={"player" + curPlayer.id}>
+        <h2 key={"playerName" + curPlayer.id}>{"Player" + curPlayer.id}</h2>
+        <table>
+          <tbody>
+            <tr>{tbodyPlayer}</tr>
+          </tbody>
+        </table>
+        <div style={{ height: "30px" }}></div>
+      </div>
     );
-  }
+  });
 
   return (
     <div style={boardStyle}>
@@ -90,11 +105,7 @@ const Board: React.FC<BoardProps> = ({ ctx, G, moves }) => {
         </tbody>
       </table>
       <hr />
-      <table id="player">
-        <tbody>
-          <tr>{tbodyPlayer}</tr>
-        </tbody>
-      </table>
+      {playerTables}
     </div>
   );
 };

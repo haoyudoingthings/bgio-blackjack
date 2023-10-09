@@ -26,9 +26,8 @@ export interface GameContext {
   turn: number;
   currentPlayer: number;
   gameover?: GameOver;
-  random: Random;
-  events: Events;
   playOrderPos: number;
+  activePlayers: object;
 }
 
 export interface GameState {
@@ -36,7 +35,6 @@ export interface GameState {
   dealerDeck: Record<string, unknown>; // <Card[]>, an array of remaining cards
   dealerHand: Record<string, unknown>[]; // <Card[]>, an array of dealer's cards
   dealerValue?: number;
-  // poolChips: number; // chips on the table
   players: Record<string, unknown>[]; // <Player[]>
 }
 

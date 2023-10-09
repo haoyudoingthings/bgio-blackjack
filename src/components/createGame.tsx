@@ -178,7 +178,8 @@ export const createGame = (numDecks: number, numPlayers: number) => {
         onBegin: ({ G, ctx, events }: GameObject) => {
           const dealerDeck = DealerDeck.deserialize(G.dealerDeck);
           const dealerHand = G.dealerHand.map((h) => Card.deserialize(h));
-          
+          const players = G.players.map((p) => Player.deserialize(p));
+
           dealerHand[1].face = CardFace.up;
           while (G.dealerValue! < 17) {
             dealerHand.push(dealerDeck.dealCard());
@@ -187,41 +188,23 @@ export const createGame = (numDecks: number, numPlayers: number) => {
 
           G.dealerDeck = dealerDeck.serialize();
           G.dealerHand = dealerHand.map((h) => h.serialize());
+          G.players = players.map((p) => p.serialize());
+        },
+        moves: {
+          confirmResult: ({ G, ctx, playerID }: GameObject) => {
+            return;
+          },
         },
         turn: {
-          order: TurnOrder.ONCE,
-          onBegin: ({ G, ctx, events }: GameObject) => {
-                  const players = G.players.map((p) => Player.deserialize(p));
-                  const curPlayer = players[ctx.currentPlayer];
-      
-                  for (let i = 0; i < 2; i++) {
-                    curPlayer.curHand = i;
-                    if (curPlayer.getCards().length !== 0) {
-                      let playerValue = ScoreCalculator.score(curPlayer.getCards());
-                      if (playerValue < G.dealerValue! || playerValue > 21) {
-                        curPlayer.lose();
-                      } else if ( // player has blackjack
-                        playerValue === 21 && 
-                        G.dealerValue !== 21 && 
-                        curPlayer.hands[0].length === 2 &&
-                        curPlayer.hands[1].length === 0
-                      ) {
-                        curPlayer.win(1.5);
-                      } else if (
-                        playerValue > G.dealerValue! ||
-                        G.dealerValue! > 21
-                      ) {
-                        curPlayer.win(1);
-                      } else {
-                        curPlayer.tie();
-                      }
-                    }
-                  }
-                  curPlayer.curHand = 0;
-                  G.players = players.map((p) => p.serialize());
-                  events.endTurn();
-            },
+          activePlayers: ActivePlayers.ALL_ONCE,
+          endIf: ({ G, ctx }: GameObject) => {
+            // end if there are no active players
+            return ctx.activePlayers === null;
           },
+          onEnd: ({ events }: GameObject) => {
+            events.endPhase();
+          }
+        },
         onEnd: ({ G, ctx }: GameObject) => {
           G.dealerHand = [];
           G.dealerValue = 0;
@@ -230,6 +213,35 @@ export const createGame = (numDecks: number, numPlayers: number) => {
             dealerDeck.initial(dealerDeck.numDecks);
             G.dealerDeck = dealerDeck.serialize();
           }
+          const players = G.players.map((p) => Player.deserialize(p));
+
+          for (const curPlayer of players) {
+            for (let i = 0; i < 2; i++) {
+              curPlayer.curHand = i;
+              if (curPlayer.getCards().length !== 0) {
+                let playerValue = ScoreCalculator.score(curPlayer.getCards());
+                if (playerValue < G.dealerValue! || playerValue > 21) {
+                  curPlayer.lose();
+                } else if ( // player has blackjack
+                  playerValue === 21 && 
+                  G.dealerValue !== 21 && 
+                  curPlayer.hands[0].length === 2 &&
+                  curPlayer.hands[1].length === 0
+                ) {
+                  curPlayer.win(1.5);
+                } else if (
+                  playerValue > G.dealerValue! ||
+                  G.dealerValue! > 21
+                ) {
+                  curPlayer.win(1);
+                } else {
+                  curPlayer.tie();
+                }
+              }
+            }
+            curPlayer.curHand = 0;
+          }
+          G.players = players.map((p) => p.serialize());
         },
         next: "initialDeal",
       },

@@ -5,7 +5,7 @@ import { Player } from "../utils/Player";
 
 import { ScoreCalculator } from "../utils/ScoreCalculator";
 
-import { TurnOrder } from "boardgame.io/core";
+import { TurnOrder, ActivePlayers } from "boardgame.io/core";
 
 export const createGame = (numDecks: number, numPlayers: number) => {
   return {
@@ -20,13 +20,10 @@ export const createGame = (numDecks: number, numPlayers: number) => {
         players.push(new Player(i, 100));
       }
 
-      const poolChips = 0;
-
       return {
         numDecks,
         dealerDeck: dealerDeck.serialize(),
         dealerHand: dealerHand.map((c) => c.serialize()),
-        poolChips,
         players: players.map((p) => p.serialize()),
       };
     },
@@ -50,7 +47,6 @@ export const createGame = (numDecks: number, numPlayers: number) => {
             const curPlayer = players[ctx.currentPlayer];
             if (!curPlayer.canBet(betAmount)) return;
             curPlayer.bet(betAmount);
-            G.poolChips += betAmount;
             G.players = players.map((p) => p.serialize());
             events.endTurn();
           },
@@ -83,24 +79,18 @@ export const createGame = (numDecks: number, numPlayers: number) => {
           // calculate dealer value
           G.dealerValue = ScoreCalculator.score(dealerHand);
 
-          // check for blackjack
-          players.forEach((player) => {
-            if (ScoreCalculator.checkBlackjack(...player.initialHand!)) {
-              player.win(1.5);
-            }
-          });
-
           G.players = players.map((p) => p.serialize());
           G.dealerDeck = dealerDeck.serialize();
           G.dealerHand = dealerHand.map((h) => h.serialize());
+
+          // check for blackjack // moved to settled phase
         },
-        next: "playerAction",
+        next: ({ G }: GameObject) => {
+          return G.dealerValue! >= 21 ? "settled" : "playerAction";
+        },
       },
 
       playerAction: {
-        endIf: ({ G, ctx }: GameObject) => {
-          return G.dealerValue! > 21;
-        },
         moves: {
           hit: ({ G, ctx, playerID, events, random }: GameObject) => {
             const players = G.players.map((p) => Player.deserialize(p));
@@ -108,17 +98,13 @@ export const createGame = (numDecks: number, numPlayers: number) => {
             const dealerDeck = DealerDeck.deserialize(G.dealerDeck);
 
             curPlayer.addCard(dealerDeck.dealCard(CardFace.up));
-            if (ScoreCalculator.score(curPlayer.getCards()) > 21) {
+            if (ScoreCalculator.score(curPlayer.getCards()) >= 21) {
               if (curPlayer.splitted && curPlayer.curHand === 0) {
                 curPlayer.curHand += 1;
               } else {
-                G.players = players.map((p) => p.serialize());
-                G.dealerDeck = dealerDeck.serialize();
                 events.endTurn();
-                return;
               }
             }
-
             G.players = players.map((p) => p.serialize());
             G.dealerDeck = dealerDeck.serialize();
           },
@@ -136,7 +122,6 @@ export const createGame = (numDecks: number, numPlayers: number) => {
             const players = G.players.map((p) => Player.deserialize(p));
             const curPlayer = players[ctx.currentPlayer];
             const dealerDeck = DealerDeck.deserialize(G.dealerDeck);
-            const dealerHand = G.dealerHand.map((h) => Card.deserialize(h));
 
             if (curPlayer.splitted || curPlayer.chips < curPlayer.betOnTable) {
               return; // cannot double after split or don't have enough money
@@ -145,22 +130,9 @@ export const createGame = (numDecks: number, numPlayers: number) => {
             curPlayer.bet(curPlayer.betOnTable);
 
             curPlayer.addCard(dealerDeck.dealCard(CardFace.up));
-            if (ScoreCalculator.score(curPlayer.getCards()) > 21) {
-              curPlayer.lose();
-              G.players = players.map((p) => p.serialize());
-              G.dealerDeck = dealerDeck.serialize();
-              events.endTurn();
-              return;
-            }
-
-            while (G.dealerValue! < 17) {
-              dealerHand.push(dealerDeck.dealCard(CardFace.down));
-              G.dealerValue = ScoreCalculator.score(dealerHand);
-            } // if dealerValue > 21, this phase will end automatically
 
             G.players = players.map((p) => p.serialize());
             G.dealerDeck = dealerDeck.serialize();
-            G.dealerHand = dealerHand.map((h) => h.serialize());
             events.endTurn();
           },
           split: ({ G, ctx, events, random }: GameObject) => {
@@ -194,7 +166,7 @@ export const createGame = (numDecks: number, numPlayers: number) => {
           onBegin: ({ G, ctx, events }: GameObject) => {
             const players = G.players.map((p) => Player.deserialize(p));
             const curPlayer = players[ctx.currentPlayer];
-            if (curPlayer.isEmptyHand) {
+            if (curPlayer.isEmptyHand) { // what's the purpose of this?
               events.endTurn();
             }
           },
@@ -206,8 +178,10 @@ export const createGame = (numDecks: number, numPlayers: number) => {
         onBegin: ({ G, ctx, events }: GameObject) => {
           const dealerDeck = DealerDeck.deserialize(G.dealerDeck);
           const dealerHand = G.dealerHand.map((h) => Card.deserialize(h));
+          
+          dealerHand[1].face = CardFace.up;
           while (G.dealerValue! < 17) {
-            dealerHand.push(dealerDeck.dealCard(CardFace.down));
+            dealerHand.push(dealerDeck.dealCard());
             G.dealerValue = ScoreCalculator.score(dealerHand);
           }
 
@@ -217,33 +191,39 @@ export const createGame = (numDecks: number, numPlayers: number) => {
         turn: {
           order: TurnOrder.ONCE,
           onBegin: ({ G, ctx, events }: GameObject) => {
-            const players = G.players.map((p) => Player.deserialize(p));
-            const curPlayer = players[ctx.currentPlayer];
-
-            for (let i = 0; i < 2; i++) {
-              curPlayer.curHand = i;
-              if (curPlayer.getCards().length !== 0) {
-                let playerValue = ScoreCalculator.score(curPlayer.getCards());
-                if (playerValue < G.dealerValue! || playerValue > 21) {
-                  curPlayer.lose();
-                } else if (
-                  playerValue > G.dealerValue! ||
-                  G.dealerValue! > 21
-                ) {
-                  curPlayer.win(1);
-                } else {
-                  curPlayer.tie();
-                }
-              }
-            }
-            curPlayer.curHand = 0;
-            G.players = players.map((p) => p.serialize());
-            events.endTurn();
+                  const players = G.players.map((p) => Player.deserialize(p));
+                  const curPlayer = players[ctx.currentPlayer];
+      
+                  for (let i = 0; i < 2; i++) {
+                    curPlayer.curHand = i;
+                    if (curPlayer.getCards().length !== 0) {
+                      let playerValue = ScoreCalculator.score(curPlayer.getCards());
+                      if (playerValue < G.dealerValue! || playerValue > 21) {
+                        curPlayer.lose();
+                      } else if ( // player has blackjack
+                        playerValue === 21 && 
+                        G.dealerValue !== 21 && 
+                        curPlayer.hands[0].length === 2 &&
+                        curPlayer.hands[1].length === 0
+                      ) {
+                        curPlayer.win(1.5);
+                      } else if (
+                        playerValue > G.dealerValue! ||
+                        G.dealerValue! > 21
+                      ) {
+                        curPlayer.win(1);
+                      } else {
+                        curPlayer.tie();
+                      }
+                    }
+                  }
+                  curPlayer.curHand = 0;
+                  G.players = players.map((p) => p.serialize());
+                  events.endTurn();
+            },
           },
-        },
         onEnd: ({ G, ctx }: GameObject) => {
           G.dealerHand = [];
-          G.poolChips = 0;
           G.dealerValue = 0;
           const dealerDeck = DealerDeck.deserialize(G.dealerDeck);
           if (dealerDeck.shouldRefill) {

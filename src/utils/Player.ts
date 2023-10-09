@@ -49,7 +49,7 @@ export class Player extends SerializableEntity {
         this.chips = chips || 100;
         this.highestChips = this.chips!;
         this.hands = [[], []];
-        this.curHand = 0; // 0: orignialHand, 1: splitHand
+        this.curHand = 0; // 0: originalHand, 1: splitHand
         this.betOnTable = 0;
         this.splitted = false;
     }

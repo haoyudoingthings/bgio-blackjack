@@ -20,7 +20,7 @@ const App: React.FC = () => {
       {
           Client ?
             <Client /> :
-          <Setup onClientPropsSubmit={onClientPropsSubmit} />
+            <Setup onClientPropsSubmit={onClientPropsSubmit} />
         }
     </div>
   );

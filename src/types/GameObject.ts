@@ -11,7 +11,14 @@ interface Random {
 }
 
 interface Events {
+  endPhase: () => void;
   endTurn: () => void;
+  endStage: () => void;
+  setActivePlayers: ({ all, minMoves, maxMoves }: {
+    all: string, 
+    minMoves: number, 
+    maxMoves: number
+  }) => void;
 }
 
 export interface GameContext {
@@ -26,10 +33,10 @@ export interface GameContext {
 
 export interface GameState {
   numDecks: number; // number of decks of 52 playing cards used in each game
-  dealerDeck: Record<string, unknown>; // <DealerDeck>, an array of remaining cards
-  dealerHand: Record<string, unknown>[]; // <Card[]>, hands[0]: dealerHand; hands[1]: playerHand; hands[2]: splitHand
+  dealerDeck: Record<string, unknown>; // <Card[]>, an array of remaining cards
+  dealerHand: Record<string, unknown>[]; // <Card[]>, an array of dealer's cards
   dealerValue?: number;
-  poolChips: number; // chips on the table
+  // poolChips: number; // chips on the table
   players: Record<string, unknown>[]; // <Player[]>
 }
 

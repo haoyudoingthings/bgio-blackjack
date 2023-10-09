@@ -1,5 +1,6 @@
 import Board from './Board';
 import { createGame } from './createGame';
+import { Local } from 'boardgame.io/multiplayer';
 let BgReact = require('boardgame.io/react');
 
 export type ClientProps = {
@@ -12,7 +13,8 @@ const createClient = (props: ClientProps) => {
     game: createGame(props.numDecks, props.numPlayers),
     numPlayers: props.numPlayers,
     board: Board,
-    debug: true
+    debug: true,
+    multiplayer: Local()
   });
 }
 

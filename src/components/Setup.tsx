@@ -44,7 +44,7 @@ const Setup: React.FC<SetupProps> = ({ onClientPropsSubmit }) => {
         name="numPlayers"
         value={inputs.numPlayers || ""}
         min="1"
-        max="5"
+        max="10"
         onChange={handleChange}
       ></input>
 
